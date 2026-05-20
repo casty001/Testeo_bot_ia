@@ -5,7 +5,7 @@ import axios from "axios";
 // 📦 CONFIGURACIÓN LOCAL (OLLAMA)
 // ==========================================
 const OLLAMA_URL = "http://localhost:11434/api/chat";
-const MODELO_LOCAL = "llama3.2";
+const MODELO_LOCAL = "qwen3:4b";
 
 let historialMemoria = [];
 
@@ -175,40 +175,40 @@ function buscarRespuestaRapida(texto) {
 // 🚀 CONEXIÓN A TU OLLAMA
 // ==========================================
 async function preguntarIA(textoUsuario) {
-  // 1. ¡CORREGIDO! Primero guardamos la entrada del usuario en la memoria
-  historialMemoria.push({ role: "user", content: textoUsuario });
+    historialMemoria.push({ role: "user", content: textoUsuario })
 
-  // 2. Cortamos para enviarle solo el contexto inmediato (evita amnesia y ahorra RAM)
-  const historialUltraCorto = historialMemoria.slice(-30); // Suficiente para recordar talla, cantidad y los datos que va soltando.
-  try {
-    const res = await axios.post(
-      OLLAMA_URL,
-      {
-        model: MODELO_LOCAL,
-        stream: false,
-        temperature: 0.15, // Le da un toquecito de flexibilidad para entender jergas colombianas
-        top_p: 0.3, // Obliga a evaluar un grupo más grande de palabras probables
-        top_k: 40, // Hace que el procesador de la Mac compare más opciones antes de elegir qué decir
-        repeat_penalty: 1.4,
-        num_predict: 80,
-        num_ctx: 1500,
-        messages: [
-          { role: "system", content: PROMPT_SISTEMA },
-          ...historialUltraCorto,
-        ],
-      },
-      { timeout: 15000 },
-    );
+    const historialUltraCorto = historialMemoria.slice(-30)
 
-    const respuestaBot = res.data.message?.content?.trim();
+    try {
+        const res = await axios.post(
+            OLLAMA_URL,
+            {
+                model: MODELO_LOCAL,
+                stream: false,
+                options: {
+                    temperature: 0.3,
+    top_p: 0.85,
+                    top_k: 40,
+                    repeat_penalty: 1.2,
+                    num_predict: 150,
+                    num_ctx: 1500
+                },          // ← COMA AQUÍ
+                messages: [
+                    { role: "system", content: PROMPT_SISTEMA },
+                    ...historialUltraCorto
+                ]
+            },
+            { timeout: 90000 }
+        )
 
-    // 3. Guardamos la respuesta de la IA en el historial
-    historialMemoria.push({ role: "assistant", content: respuestaBot });
-    return respuestaBot;
-  } catch (err) {
-    console.log(`\n❌ Error al conectar con Ollama (${err.message})`);
-    return "Estoy aquí 😊 ¿Quieres ver la promoción disponible hoy?";
-  }
+        const respuestaBot = res.data.message?.content?.trim()
+        historialMemoria.push({ role: "assistant", content: respuestaBot })
+        return respuestaBot
+
+    } catch (err) {
+        console.log(`\n❌ Error al conectar con Ollama (${err.message})`)
+        return 'Estoy aquí 😊 ¿Quieres ver la promoción disponible hoy?'
+    }
 }
 
 // ==========================================
